@@ -122,15 +122,15 @@ def map_emotion(emotion, confidence):
     }
     
     if emotion == "POSITIVE":
-        # Happy/excited: faster, higher pitch, louder
+        # Happy/excited: balanced rate, neutral pitch, louder volume, more stable
         settings.update({
-            'rate': 1.2,
-            'pitch': 1.1,
-            'volume': 1.1,
-            'stability': 0.3,
-            'similarity_boost': 0.8,
+            'rate': 1.0,
+            'pitch': 1.0,  # neutral pitch (0 semitones in frontend)
+            'volume': 1.1,  # +3dB volume boost
+            'stability': 0.7,
+            'similarity_boost': 0.5,
             'style': 0.2,
-            'speed': 1.1
+            'speed': 0.9
         })
     elif emotion == "NEGATIVE":
         # Sad/depressed: slower, lower pitch, quieter, with stuttering

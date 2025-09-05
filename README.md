@@ -37,8 +37,10 @@ An advanced AI-powered text-to-speech system that analyzes text emotion and appl
 ### 🎨 **Interactive Web Interface**
 - **Dual Control Sections**: Audio Processing + Voice Settings
 - **Emotion Presets**: One-click presets for Positive, Negative, Neutral
-- **Real-time Feedback**: Shows original vs processed text
-- **Visual Indicators**: Clear display when stuttering is applied
+- **🧠 Emotion Override Toggle**: Auto-apply emotion-specific settings or use manual controls
+- **Real-time Feedback**: Shows original vs processed text when stuttering is applied
+- **Visual Indicators**: Clear display when emotion override and stuttering are active
+- **Example Text Suggestions**: Built-in examples for testing different emotions
 - **Responsive Design**: Works on desktop and mobile
 
 ## 🧠 How Emotion Detection Works
