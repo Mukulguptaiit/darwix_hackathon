@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Empathetic TTS - Voice Modulation</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .input-group {
+            margin-bottom: 25px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            resize: vertical;
+            min-height: 100px;
+            font-size: 16px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+        }
+        
+        .slider-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+            margin: 25px 0;
+        }
+        
+        .slider-group {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+        }
+        
+        .slider {
+            width: 100%;
+            height: 8px;
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.3);
+            outline: none;
+            margin: 10px 0;
+        }
+        
+        .slider::-webkit-slider-thumb {
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #4CAF50;
+            cursor: pointer;
+            border: 2px solid white;
+        }
+        
+        .slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #4CAF50;
+            cursor: pointer;
+            border: 2px solid white;
+        }
+        
+        .value-display {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #FFD700;
+            margin-top: 5px;
+        }
+        
+        .preset-buttons {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        .preset-btn {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 25px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        
+        .preset-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .preset-btn.positive { border-color: #4CAF50; }
+        .preset-btn.negative { border-color: #f44336; }
+        .preset-btn.neutral { border-color: #2196F3; }
+        
+        .generate-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-size: 1.2em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+        
+        .generate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        
+        .generate-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .result {
+            margin-top: 25px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            display: none;
+        }
+        
+        audio {
+            width: 100%;
+            margin-top: 15px;
+        }
+        
+        .emotion-display {
+            text-align: center;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+        }
+        
+        .loading {
+            text-align: center;
+            font-style: italic;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎙️ Empathetic TTS</h1>
+        
+        <div class="input-group">
+            <label for="textInput">Enter your text:</label>
+            <textarea id="textInput" placeholder="Type something to convert to speech...">Hello, this is a test of the empathetic text-to-speech system.</textarea>
+        </div>
+        
+        <div class="preset-buttons">
+            <button class="preset-btn positive" onclick="setPreset('positive')">
+                😊 Positive<br><small>Happy & Energetic</small>
+            </button>
+            <button class="preset-btn neutral" onclick="setPreset('neutral')">
+                😐 Neutral<br><small>Normal Speech</small>
+            </button>
+            <button class="preset-btn negative" onclick="setPreset('negative')">
+                😔 Negative<br><small>Sad & Slow</small>
+            </button>
+        </div>
+        
+        <div class="slider-container">
+            <div class="slider-group">
+                <label>🏃 Rate (Speed)</label>
+                <input type="range" id="rateSlider" class="slider" min="0.5" max="2.0" step="0.1" value="1.0">
+                <div class="value-display" id="rateValue">1.0x</div>
+                <small>0.5x (Slow) to 2.0x (Fast)</small>
+            </div>
+            
+            <div class="slider-group">
+                <label>🎵 Pitch</label>
+                <input type="range" id="pitchSlider" class="slider" min="-12" max="12" step="1" value="0">
+                <div class="value-display" id="pitchValue">0</div>
+                <small>-12 (Lower) to +12 (Higher)</small>
+            </div>
+            
+            <div class="slider-group">
+                <label>🔊 Volume</label>
+                <input type="range" id="volumeSlider" class="slider" min="-20" max="20" step="1" value="0">
+                <div class="value-display" id="volumeValue">0 dB</div>
+                <small>-20dB (Quiet) to +20dB (Loud)</small>
+            </div>
+        </div>
+        
+        <button class="generate-btn" id="generateBtn" onclick="generateSpeech()">
+            🎯 Generate Speech
+        </button>
+        
+        <div class="result" id="result">
+            <div class="emotion-display" id="emotionDisplay"></div>
+            <audio id="audioPlayer" controls></audio>
+        </div>
+    </div>
+
+    <script>
+        // Update slider value displays
+        document.getElementById('rateSlider').addEventListener('input', function() {
+            document.getElementById('rateValue').textContent = this.value + 'x';
+        });
+        
+        document.getElementById('pitchSlider').addEventListener('input', function() {
+            const value = parseInt(this.value);
+            const sign = value > 0 ? '+' : '';
+            document.getElementById('pitchValue').textContent = sign + value;
+        });
+        
+        document.getElementById('volumeSlider').addEventListener('input', function() {
+            const value = parseInt(this.value);
+            const sign = value > 0 ? '+' : '';
+            document.getElementById('volumeValue').textContent = sign + value + ' dB';
+        });
+        
+        // Preset configurations
+        function setPreset(type) {
+            const rateSlider = document.getElementById('rateSlider');
+            const pitchSlider = document.getElementById('pitchSlider');
+            const volumeSlider = document.getElementById('volumeSlider');
+            
+            switch(type) {
+                case 'positive':
+                    rateSlider.value = 1.2;
+                    pitchSlider.value = 2;
+                    volumeSlider.value = 3;
+                    break;
+                case 'negative':
+                    rateSlider.value = 0.85;
+                    pitchSlider.value = -2;
+                    volumeSlider.value = -3;
+                    break;
+                case 'neutral':
+                    rateSlider.value = 1.0;
+                    pitchSlider.value = 0;
+                    volumeSlider.value = 0;
+                    break;
+            }
+            
+            // Trigger input events to update displays
+            rateSlider.dispatchEvent(new Event('input'));
+            pitchSlider.dispatchEvent(new Event('input'));
+            volumeSlider.dispatchEvent(new Event('input'));
+        }
+        
+        // Generate speech
+        async function generateSpeech() {
+            const text = document.getElementById('textInput').value.trim();
+            if (!text) {
+                alert('Please enter some text');
+                return;
+            }
+            
+            const rate = parseFloat(document.getElementById('rateSlider').value);
+            const pitch = parseInt(document.getElementById('pitchSlider').value);
+            const volume = parseInt(document.getElementById('volumeSlider').value);
+            
+            const generateBtn = document.getElementById('generateBtn');
+            const result = document.getElementById('result');
+            
+            // Show loading state
+            generateBtn.disabled = true;
+            generateBtn.textContent = '🔄 Generating...';
+            result.style.display = 'block';
+            result.innerHTML = '<div class="loading">🎤 Processing your text...</div>';
+            
+            try {
+                const response = await fetch('http://127.0.0.1:8000/speak', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        text: text,
+                        rate: rate,
+                        pitch: pitch,
+                        volume: volume
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                
+                const data = await response.json();
+                
+                // Wait a brief moment for the file to be fully written
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                // Display results with improved audio loading
+                const timestamp = Date.now();
+                result.innerHTML = `
+                    <div class="emotion-display">
+                        <strong>Detected Emotion:</strong> ${data.emotion} (${Math.round(data.confidence * 100)}% confidence)<br>
+                        <strong>Applied Settings:</strong> Rate: ${rate}x, Pitch: ${pitch > 0 ? '+' : ''}${pitch}, Volume: ${volume > 0 ? '+' : ''}${volume}dB
+                    </div>
+                    <audio controls preload="auto" id="generatedAudio">
+                        <source src="http://127.0.0.1:8000/audio?t=${timestamp}" type="audio/wav">
+                        Your browser does not support the audio element.
+                    </audio>
+                `;
+                
+                // Ensure audio is loaded and ready
+                const audioElement = document.getElementById('generatedAudio');
+                audioElement.addEventListener('loadeddata', function() {
+                    console.log('Audio loaded successfully');
+                });
+                audioElement.addEventListener('error', function(e) {
+                    console.error('Audio loading error:', e);
+                    result.innerHTML += '<div style="color: #ff6b6b;">⚠️ Audio playback error. File may still be processing.</div>';
+                });
+                audioElement.load(); // Force reload
+                
+            } catch (error) {
+                console.error('Error:', error);
+                result.innerHTML = '<div style="color: #ff6b6b;">❌ Error generating speech. Please try again.</div>';
+            } finally {
+                generateBtn.disabled = false;
+                generateBtn.textContent = '🎯 Generate Speech';
+            }
+        }
+    </script>
+</body>
+</html>

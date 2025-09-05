@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Empathy Engine 🎙️</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 40px; }
+    h1 { color: #444; }
+    textarea { width: 100%; height: 80px; }
+    button { margin-top: 10px; padding: 10px 20px; }
+    audio { margin-top: 20px; width: 100%; }
+  </style>
+</head>
+<body>
+  <h1>Empathy Engine 🎙️</h1>
+  <p>Type text, let AI detect emotion, and listen with empathetic voice.</p>
+  <textarea id="inputText" placeholder="Type something here..."></textarea><br>
+  <button onclick="speak()">Speak</button>
+  <p id="emotion"></p>
+  <audio id="player" controls></audio>
+
+  <script>
+    async function speak() {
+      const text = document.getElementById("inputText").value;
+      if (!text) return alert("Please enter text");
+
+      // Call FastAPI backend
+      const resp = await fetch("http://127.0.0.1:8000/speak", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text })
+      });
+
+      const data = await resp.json();
+      document.getElementById("emotion").innerText =
+        `Emotion: ${data.emotion} (conf: ${data.confidence.toFixed(2)})`;
+
+      // Now fetch the audio
+      const audio = document.getElementById("player");
+      audio.src = "http://127.0.0.1:8000/audio?cache=" + Date.now();
+      audio.load();
+      audio.play();
+    }
+  </script>
+</body>
+</html>
