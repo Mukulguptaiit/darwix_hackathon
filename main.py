@@ -10,8 +10,11 @@ from transformers import pipeline
 # Load Hugging Face emotion classifier (tiny, fast model)
 clf = pipeline("sentiment-analysis")
 
-ELEVEN_API_KEY = "sk_7995d1531be437b7831444687aae00c51658a6bad8a3b9a6"
+ELEVEN_API_KEY = os.getenv("ELEVEN_API_KEY")  # Set your ElevenLabs API key as environment variable
 ELEVEN_VOICE_ID = "EXAVITQu4vr4xnSDxMaL"  # pick any ElevenLabs voice
+
+if not ELEVEN_API_KEY:
+    raise ValueError("Please set your ELEVEN_API_KEY environment variable")
 
 app = FastAPI()
 
