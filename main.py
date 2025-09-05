@@ -1,4 +1,5 @@
 import os
+import io
 import requests
 import librosa, soundfile as sf
 import numpy as np
@@ -47,9 +48,18 @@ def get_audio():
 
 class InputText(BaseModel):
     text: str
+    # Audio processing parameters
     rate: float = 1.0  # Speed (0.5 to 2.0)
     pitch: float = 0.0  # Pitch in semitones (-12 to +12)
     volume: float = 0.0  # Volume in dB (-20 to +20)
+    # ElevenLabs voice settings
+    stability: float = 0.5  # Stability (0.0 to 1.0)
+    similarity_boost: float = 0.75  # Similarity (0.0 to 1.0)
+    style: float = 0.0  # Style exaggeration (0.0 to 1.0)
+    use_speaker_boost: bool = True  # Speaker boost (True/False)
+    speed: float = 1.0  # ElevenLabs speed (0.25 to 4.0)
+    # Emotion override setting
+    use_emotion_override: bool = False  # Whether to override settings based on emotion
 
 # --- Step 1: Detect emotion ---
 def detect_emotion(text):
@@ -57,38 +67,133 @@ def detect_emotion(text):
     label = res['label'].upper()
     return label, res['score']
 
-# --- Step 2: Map emotion to params ---
+# --- Step 1.5: Add stuttering for sad emotions ---
+def add_stuttering_effects(text, emotion, confidence):
+    """
+    Add stuttering effects to text for negative emotions
+    """
+    if emotion == "NEGATIVE" and confidence > 0.7:
+        import re
+        # Words that commonly get stuttered when sad
+        stutter_words = ['i', 'can', 'just', 'really', 'feel', 'think', 'know', 'want', 'need', 'sorry']
+        
+        words = text.split()
+        modified_words = []
+        
+        for word in words:
+            word_lower = word.lower().strip('.,!?;:')
+            # Add stuttering to emotional words and beginning of sentences
+            if (word_lower in stutter_words or 
+                len(modified_words) == 0 or  # First word
+                modified_words[-1].endswith('.') or modified_words[-1].endswith('!')):
+                
+                # Create stuttering effect by repeating first syllable
+                if len(word_lower) > 2:
+                    first_part = word_lower[0]
+                    if word_lower[1] in 'aeiou':  # If second letter is vowel, take first letter
+                        stutter = f"{first_part}-{first_part}-{word}"
+                    else:  # Take first consonant cluster
+                        first_part = word_lower[:2]
+                        stutter = f"{first_part}-{first_part}-{word}"
+                    modified_words.append(stutter)
+                else:
+                    modified_words.append(word)
+            else:
+                modified_words.append(word)
+        
+        return ' '.join(modified_words)
+    
+    return text
+
+# --- Step 2: Map emotion to TTS settings ---
 def map_emotion(emotion, confidence):
-    params = {'rate': 1.0, 'pitch': 0.0, 'volume': 0.0}
+    """Map emotion to TTS parameters"""
+    
+    # Base settings
+    settings = {
+        'rate': 1.0,    # Speech rate multiplier
+        'pitch': 1.0,   # Pitch multiplier  
+        'volume': 1.0,  # Volume multiplier
+        'stability': 0.5,
+        'similarity_boost': 0.75,
+        'style': 0.0,
+        'use_speaker_boost': True,
+        'speed': 1.0    # ElevenLabs speed parameter
+    }
+    
     if emotion == "POSITIVE":
-        params['rate'] = 1.2
-        params['pitch'] = +2
-        params['volume'] = +3
+        # Happy/excited: faster, higher pitch, louder
+        settings.update({
+            'rate': 1.2,
+            'pitch': 1.1,
+            'volume': 1.1,
+            'stability': 0.3,
+            'similarity_boost': 0.8,
+            'style': 0.2,
+            'speed': 1.1
+        })
     elif emotion == "NEGATIVE":
-        params['rate'] = 0.85
-        params['pitch'] = -2
-        params['volume'] = -3
-    else:  # NEUTRAL
-        params['rate'] = 1.0
-        params['pitch'] = 0.0
-        params['volume'] = 0.0
-    return params
+        # Sad/depressed: slower, lower pitch, quieter, with stuttering
+        settings.update({
+            'rate': 0.8,
+            'pitch': 0.9,
+            'volume': 0.8,
+            'stability': 0.2,  # Lower stability for more emotional variation
+            'similarity_boost': 0.6,
+            'style': 0.1,
+            'speed': 0.8  # Slower speech for sad emotions
+        })
+    # LABEL_1 (neutral) keeps base settings
+    
+    return settings
 
 # --- Step 3: Call ElevenLabs API ---
-def elevenlabs_tts(text, out_file="raw.wav"):
-    url = f"https://api.elevenlabs.io/v1/text-to-speech/{ELEVEN_VOICE_ID}"
-    headers = {
-        "xi-api-key": ELEVEN_API_KEY,
-        "Content-Type": "application/json"
+# --- Step 3: ElevenLabs TTS ---
+def elevenlabs_tts(text, voice_id="21m00Tcm4TlvDq8ikWAM", voice_settings=None):
+    """
+    Convert text to speech using ElevenLabs API
+    
+    Args:
+        text (str): Text to convert
+        voice_id (str): ElevenLabs voice ID 
+        voice_settings (dict): Voice configuration settings
+    
+    Returns:
+        bytes: Audio data in MP3 format
+    """
+    url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
+    
+    # Default voice settings
+    default_settings = {
+        "stability": 0.5,
+        "similarity_boost": 0.75,
+        "style": 0.0,
+        "use_speaker_boost": True,
+        "speed": 1.0
     }
-    data = {
+    
+    # Merge with provided settings
+    if voice_settings:
+        default_settings.update(voice_settings)
+    
+    payload = {
         "text": text,
-        "voice_settings": {"stability": 0.5, "similarity_boost": 0.5}
+        "model_id": "eleven_monolingual_v1",
+        "voice_settings": default_settings
     }
-    response = requests.post(url, headers=headers, json=data)
-    with open(out_file, "wb") as f:
-        f.write(response.content)
-    return out_file
+    
+    headers = {
+        "Accept": "audio/mpeg",
+        "Content-Type": "application/json",
+        "xi-api-key": ELEVEN_API_KEY
+    }
+    
+    response = requests.post(url, json=payload, headers=headers)
+    
+    if response.status_code == 200:
+        return response.content
+    else:
+        raise Exception(f"ElevenLabs API error: {response.status_code}, {response.text}")
 
 # --- Step 4: Modify audio locally ---
 def modulate_audio(inp, out, rate=1.0, pitch=0.0, volume=0.0):
@@ -125,19 +230,80 @@ def speak(data: InputText):
     text = data.text
     emotion, conf = detect_emotion(text)
     
-    # Use user-provided parameters instead of emotion-based ones
-    base_file = elevenlabs_tts(text, "neutral.wav")
-    final_file = modulate_audio(base_file, "final.wav",
-                                rate=data.rate,
-                                pitch=data.pitch,
-                                volume=data.volume)
-    return {
-        "emotion": emotion,
-        "confidence": conf,
-        "params": {
-            "rate": data.rate,
-            "pitch": data.pitch,
-            "volume": data.volume
-        },
-        "audio_file": final_file
+    # Apply stuttering effects for sad emotions
+    processed_text = add_stuttering_effects(text, emotion, conf)
+    
+    # Get base parameters from user input
+    rate = data.rate
+    pitch = data.pitch
+    volume = data.volume
+    voice_settings = {
+        "stability": data.stability,
+        "similarity_boost": data.similarity_boost,
+        "style": data.style,
+        "use_speaker_boost": data.use_speaker_boost,
+        "speed": data.speed
     }
+    
+    # Apply emotion-based overrides if enabled and confidence is high
+    emotion_overridden = False
+    if data.use_emotion_override and conf > 0.7:
+        emotion_settings = map_emotion(emotion, conf)
+        
+        # Override audio processing parameters
+        rate = emotion_settings['rate']
+        pitch = emotion_settings['pitch']
+        volume = emotion_settings['volume']
+        
+        # Override voice settings
+        voice_settings = {
+            "stability": emotion_settings['stability'],
+            "similarity_boost": emotion_settings['similarity_boost'],
+            "style": emotion_settings['style'],
+            "use_speaker_boost": emotion_settings['use_speaker_boost'],
+            "speed": emotion_settings['speed']
+        }
+        emotion_overridden = True
+    
+    # Generate audio using ElevenLabs
+    try:
+        audio_bytes = elevenlabs_tts(processed_text, voice_settings=voice_settings)
+        
+        # Convert MP3 to WAV for processing
+        audio_segment = AudioSegment.from_mp3(io.BytesIO(audio_bytes))
+        base_file = "temp_base.wav"
+        audio_segment.export(base_file, format="wav")
+        
+        # Apply audio modulation
+        final_file = modulate_audio(base_file, "final.wav",
+                                    rate=rate,
+                                    pitch=pitch,
+                                    volume=volume)
+        
+        return {
+            "emotion": emotion,
+            "confidence": conf,
+            "original_text": text,
+            "processed_text": processed_text,
+            "stuttering_applied": processed_text != text,
+            "emotion_overridden": emotion_overridden,
+            "applied_params": {
+                "rate": rate,
+                "pitch": pitch,
+                "volume": volume
+            },
+            "applied_voice_settings": voice_settings,
+            "user_params": {
+                "rate": data.rate,
+                "pitch": data.pitch,
+                "volume": data.volume,
+                "stability": data.stability,
+                "similarity_boost": data.similarity_boost,
+                "style": data.style,
+                "use_speaker_boost": data.use_speaker_boost,
+                "speed": data.speed
+            },
+            "audio_file": final_file
+        }
+    except Exception as e:
+        return {"error": str(e)}

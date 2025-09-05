@@ -189,17 +189,26 @@
         <div class="input-group">
             <label for="textInput">Enter your text:</label>
             <textarea id="textInput" placeholder="Type something to convert to speech...">Hello, this is a test of the empathetic text-to-speech system.</textarea>
+            
+            <div style="margin-top: 10px; padding: 10px; background: rgba(255, 255, 255, 0.05); border-radius: 8px;">
+                <strong>💡 Try these examples for emotion detection:</strong><br>
+                <small style="opacity: 0.8;">
+                    <strong>Positive:</strong> "I'm so excited about this amazing project!"<br>
+                    <strong>Negative:</strong> "I feel really sad and I just want to cry" (will trigger stuttering)<br>
+                    <strong>Neutral:</strong> "The weather forecast shows rain tomorrow."
+                </small>
+            </div>
         </div>
         
         <div class="preset-buttons">
             <button class="preset-btn positive" onclick="setPreset('positive')">
-                😊 Positive<br><small>Happy & Energetic</small>
+                😊 Positive<br><small>Happy & Energetic (Fast, High Pitch)</small>
             </button>
             <button class="preset-btn neutral" onclick="setPreset('neutral')">
-                😐 Neutral<br><small>Normal Speech</small>
+                😐 Neutral<br><small>Balanced & Natural (Default Settings)</small>
             </button>
             <button class="preset-btn negative" onclick="setPreset('negative')">
-                😔 Negative<br><small>Sad & Slow</small>
+                😔 Negative<br><small>Sad & Emotional (Slow, Low Stability)</small>
             </button>
         </div>
         
@@ -223,6 +232,58 @@
                 <input type="range" id="volumeSlider" class="slider" min="-20" max="20" step="1" value="0">
                 <div class="value-display" id="volumeValue">0 dB</div>
                 <small>-20dB (Quiet) to +20dB (Loud)</small>
+            </div>
+        </div>
+        
+        <h3 style="text-align: center; margin: 30px 0 20px 0; color: #FFD700;">🎙️ ElevenLabs Voice Settings</h3>
+        
+        <div class="slider-container">
+            <div class="slider-group">
+                <label>⚖️ Stability</label>
+                <input type="range" id="stabilitySlider" class="slider" min="0.0" max="1.0" step="0.05" value="0.5">
+                <div class="value-display" id="stabilityValue">0.50</div>
+                <small>0.0 (Random) to 1.0 (Stable)</small>
+            </div>
+            
+            <div class="slider-group">
+                <label>🎯 Similarity</label>
+                <input type="range" id="similaritySlider" class="slider" min="0.0" max="1.0" step="0.05" value="0.75">
+                <div class="value-display" id="similarityValue">0.75</div>
+                <small>0.0 (Creative) to 1.0 (Original)</small>
+            </div>
+            
+            <div class="slider-group">
+                <label>🎭 Style</label>
+                <input type="range" id="styleSlider" class="slider" min="0.0" max="1.0" step="0.05" value="0.0">
+                <div class="value-display" id="styleValue">0.00</div>
+                <small>0.0 (Natural) to 1.0 (Exaggerated)</small>
+            </div>
+        </div>
+        
+        <div style="text-align: center; margin: 20px 0;">
+            <label style="display: inline-flex; align-items: center; font-size: 1.1em;">
+                <input type="checkbox" id="speakerBoostCheckbox" checked style="margin-right: 10px; transform: scale(1.2);">
+                🔊 Speaker Boost (Enhanced similarity)
+            </label>
+        </div>
+        
+        <div class="slider-group">
+            <div style="text-align: center; margin-bottom: 10px;">
+                🎵 Speed: <span id="speedValue" class="value-display">1.0x</span>
+            </div>
+            <input type="range" id="speedSlider" class="slider" min="0.25" max="4.0" step="0.05" value="1.0">
+            <div style="margin-top: 5px; font-size: 0.9em; opacity: 0.8;">
+                <small>0.25x (Very Slow) to 4.0x (Very Fast)</small>
+            </div>
+        </div>
+        
+        <div style="text-align: center; margin: 20px 0; padding: 15px; background: rgba(255, 255, 255, 0.1); border-radius: 10px;">
+            <label style="display: inline-flex; align-items: center; font-size: 1.1em; color: #ffeb3b;">
+                <input type="checkbox" id="emotionOverrideCheckbox" style="margin-right: 10px; transform: scale(1.2);">
+                🧠 Auto-Apply Emotion Settings (Overrides manual settings)
+            </label>
+            <div style="margin-top: 5px; font-size: 0.85em; opacity: 0.8;">
+                <small>When enabled, detected emotions will automatically adjust all voice parameters</small>
             </div>
         </div>
         
@@ -254,27 +315,70 @@
             document.getElementById('volumeValue').textContent = sign + value + ' dB';
         });
         
+        // ElevenLabs voice settings sliders
+        document.getElementById('stabilitySlider').addEventListener('input', function() {
+            document.getElementById('stabilityValue').textContent = parseFloat(this.value).toFixed(2);
+        });
+        
+        document.getElementById('similaritySlider').addEventListener('input', function() {
+            document.getElementById('similarityValue').textContent = parseFloat(this.value).toFixed(2);
+        });
+        
+        document.getElementById('styleSlider').addEventListener('input', function() {
+            document.getElementById('styleValue').textContent = parseFloat(this.value).toFixed(2);
+        });
+        
+        document.getElementById('speedSlider').addEventListener('input', function() {
+            document.getElementById('speedValue').textContent = parseFloat(this.value).toFixed(1) + 'x';
+        });
+        
         // Preset configurations
         function setPreset(type) {
             const rateSlider = document.getElementById('rateSlider');
             const pitchSlider = document.getElementById('pitchSlider');
             const volumeSlider = document.getElementById('volumeSlider');
+            const stabilitySlider = document.getElementById('stabilitySlider');
+            const similaritySlider = document.getElementById('similaritySlider');
+            const styleSlider = document.getElementById('styleSlider');
+            const speedSlider = document.getElementById('speedSlider');
+            const speakerBoostCheckbox = document.getElementById('speakerBoostCheckbox');
             
             switch(type) {
                 case 'positive':
+                    // Audio processing
                     rateSlider.value = 1.2;
                     pitchSlider.value = 2;
                     volumeSlider.value = 3;
+                    // Voice settings for energetic speech
+                    stabilitySlider.value = 0.3;
+                    similaritySlider.value = 0.8;
+                    styleSlider.value = 0.2;
+                    speedSlider.value = 1.1;
+                    speakerBoostCheckbox.checked = true;
                     break;
                 case 'negative':
+                    // Audio processing
                     rateSlider.value = 0.85;
                     pitchSlider.value = -2;
                     volumeSlider.value = -3;
+                    // Voice settings for subdued speech with stuttering effect
+                    stabilitySlider.value = 0.2;  // Lower stability for emotional variation
+                    similaritySlider.value = 0.6;
+                    styleSlider.value = 0.1;
+                    speedSlider.value = 0.8;  // Slower for sad emotions
+                    speakerBoostCheckbox.checked = true;
                     break;
                 case 'neutral':
+                    // Audio processing
                     rateSlider.value = 1.0;
                     pitchSlider.value = 0;
                     volumeSlider.value = 0;
+                    // Voice settings for balanced speech
+                    stabilitySlider.value = 0.5;
+                    similaritySlider.value = 0.75;
+                    styleSlider.value = 0.0;
+                    speedSlider.value = 1.0;
+                    speakerBoostCheckbox.checked = true;
                     break;
             }
             
@@ -282,6 +386,10 @@
             rateSlider.dispatchEvent(new Event('input'));
             pitchSlider.dispatchEvent(new Event('input'));
             volumeSlider.dispatchEvent(new Event('input'));
+            stabilitySlider.dispatchEvent(new Event('input'));
+            similaritySlider.dispatchEvent(new Event('input'));
+            styleSlider.dispatchEvent(new Event('input'));
+            speedSlider.dispatchEvent(new Event('input'));
         }
         
         // Generate speech
@@ -295,6 +403,12 @@
             const rate = parseFloat(document.getElementById('rateSlider').value);
             const pitch = parseInt(document.getElementById('pitchSlider').value);
             const volume = parseInt(document.getElementById('volumeSlider').value);
+            const stability = parseFloat(document.getElementById('stabilitySlider').value);
+            const similarity = parseFloat(document.getElementById('similaritySlider').value);
+            const style = parseFloat(document.getElementById('styleSlider').value);
+            const speed = parseFloat(document.getElementById('speedSlider').value);
+            const speakerBoost = document.getElementById('speakerBoostCheckbox').checked;
+            const emotionOverride = document.getElementById('emotionOverrideCheckbox').checked;
             
             const generateBtn = document.getElementById('generateBtn');
             const result = document.getElementById('result');
@@ -315,7 +429,13 @@
                         text: text,
                         rate: rate,
                         pitch: pitch,
-                        volume: volume
+                        volume: volume,
+                        stability: stability,
+                        similarity_boost: similarity,
+                        style: style,
+                        speed: speed,
+                        use_speaker_boost: speakerBoost,
+                        use_emotion_override: emotionOverride
                     })
                 });
                 
@@ -333,7 +453,13 @@
                 result.innerHTML = `
                     <div class="emotion-display">
                         <strong>Detected Emotion:</strong> ${data.emotion} (${Math.round(data.confidence * 100)}% confidence)<br>
-                        <strong>Applied Settings:</strong> Rate: ${rate}x, Pitch: ${pitch > 0 ? '+' : ''}${pitch}, Volume: ${volume > 0 ? '+' : ''}${volume}dB
+                        ${data.stuttering_applied ? '<strong>🗣️ Stuttering Applied:</strong> Text modified for emotional effect<br>' : ''}
+                        ${data.emotion_overridden ? '<strong>🧠 Emotion Override:</strong> Settings automatically adjusted based on emotion<br>' : ''}
+                        ${data.original_text !== data.processed_text ? `<strong>Original Text:</strong> "${data.original_text}"<br><strong>Processed Text:</strong> "${data.processed_text}"<br>` : ''}
+                        <strong>Applied Settings:</strong><br>
+                        &nbsp;&nbsp;Audio: Rate ${data.applied_params.rate}x, Pitch ${data.applied_params.pitch > 0 ? '+' : ''}${data.applied_params.pitch}, Volume ${data.applied_params.volume > 0 ? '+' : ''}${data.applied_params.volume}dB<br>
+                        &nbsp;&nbsp;Voice: Stability ${data.applied_voice_settings.stability}, Similarity ${data.applied_voice_settings.similarity_boost}, Style ${data.applied_voice_settings.style}, Speed ${data.applied_voice_settings.speed}x, Speaker Boost ${data.applied_voice_settings.use_speaker_boost ? 'On' : 'Off'}
+                        ${data.emotion_overridden ? `<br><strong>Your Original Settings:</strong> Rate ${data.user_params.rate}x, Pitch ${data.user_params.pitch}, Volume ${data.user_params.volume}dB, Stability ${data.user_params.stability}, etc.` : ''}
                     </div>
                     <audio controls preload="auto" id="generatedAudio">
                         <source src="http://127.0.0.1:8000/audio?t=${timestamp}" type="audio/wav">
